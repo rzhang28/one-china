@@ -20,7 +20,7 @@ library(scales)
 library(ggplot2)
 ```
 
-## Import Trade Data
+## Import, Clean, Calculate, and Export Trade Data
 
 ```{r}
 # Clean China trade data
