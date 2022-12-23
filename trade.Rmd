@@ -7,24 +7,73 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(tidyverse)
+library(tidymodels)
+library(rstanarm)
+library(Hmisc)
+library(corrplot)
+library(dplyr)
+library(data.table) 
+library(scales)
+library(ggplot2)
 ```
 
-## R Markdown
+## Import Trade Data
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r}
+# Clean China trade data
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+china <- read_csv(file = "trade_data/china_trade_2019.csv") %>%
+  subset(select = c("Partner Name",
+                    "Export (US$ Thousand)", 
+                    "Import (US$ Thousand)")) %>%
+  rename("Imports from China ($)" = "Export (US$ Thousand)",
+         "Exports to China ($)" = "Import (US$ Thousand)",
+         "Country" = "Partner Name") %>%
+  mutate("Exports and Imports with China ($)" = 
+           rowSums(.[, c("Imports from China ($)", "Exports to China ($)")]))
 
-```{r cars}
-summary(cars)
+# Clean Taiwan trade data 
+
+taiwan <- read_csv(file = "trade_data/taiwan_trade_2019.csv") %>%
+  subset(select = c("Partner Name",
+                    "Export (US$ Thousand)", 
+                    "Import (US$ Thousand)")) %>%
+  rename("Imports from Taiwan ($)" = "Export (US$ Thousand)",
+         "Exports to Taiwan ($)" = "Import (US$ Thousand)",
+         "Country" = "Partner Name") %>%
+  mutate("Exports and Imports with Taiwan ($)" = 
+           rowSums(.[, c("Imports from Taiwan ($)", "Exports to Taiwan ($)")]))
+
+# Clean world trade data
+
+world <- read_csv(file = "trade_data/world_trade_2019.csv") %>%
+  subset(select = c("Partner Name", "Year", 
+                    "Export (US$ Thousand)", 
+                    "Import (US$ Thousand)")) %>%
+  rename("Total Exports ($)" = "Export (US$ Thousand)",
+         "Total Imports ($)" = "Import (US$ Thousand)",
+         "Country" = "Partner Name") %>%
+  mutate("Total Exports and Imports ($)" = 
+           rowSums(.[, c("Total Exports ($)", "Total Imports ($)")]))
+
+# Combine China, Taiwan, and world trade data
+
+final <- inner_join(world, china, by = "Country") %>%
+  inner_join(., taiwan, by = "Country") %>%
+  
+  # Calculate each country's trade with China and Taiwan as a fraction of total trade
+  
+  mutate(`Exports and Imports with China (%)` = 
+           `Exports and Imports with China ($)` / 
+              `Total Exports and Imports ($)` * 100,
+              `Exports and Imports with Taiwan (%)` = 
+           `Exports and Imports with Taiwan ($)` / 
+              `Total Exports and Imports ($)` * 100)
+
+# Export the final data table 
+
+write.csv(final, "trade_data/final_trade_2019.csv", row.names = FALSE)
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
